@@ -4,7 +4,8 @@ Status: docs-only deployment plan. Do not apply production database writes.
 
 ## Executive Decision
 
-Deploy `daarion-edge-backend` to NODA3 first.
+Deploy `daarion-edge-backend` to NODA3 first as a local Docker service only.
+Do not choose public ingress until the stack audit is reviewed.
 
 Host roles for this beta gate:
 
@@ -216,39 +217,25 @@ Expected:
 ## Reverse Proxy Decision
 
 NODA3 currently has `httpd` listening on port `80`, active UFW without observed
-`80/tcp` or `443/tcp` allow rules, and no confirmed Nginx, Caddy, Traefik,
-Certbot, or public `443` listener. Do not stop `httpd`, replace firewall policy,
-or move existing services as part of this gate.
+`80/tcp` or `443/tcp` allow rules, and no confirmed host-level Nginx, Caddy,
+Traefik, Certbot, or public `443` listener. Do not stop `httpd`, replace
+firewall policy, or move existing services as part of this gate.
 
-Safe operator options:
+Stack audit correction:
 
-1. Add an approved Apache/httpd virtual host for `api.daarion.city` that proxies
-   only the three health endpoints to `127.0.0.1:9413`.
-2. If an external load balancer or Cloudflare tunnel terminates TLS, route only
-   the three health endpoints to NODA3.
-3. Install and configure a new reverse proxy only after the operator confirms it
-   will not bind over existing `httpd` or existing Ring FileBase/GitLab ingress.
+- the observed `httpd` is owned by the Nextcloud snap Apache service;
+- the observed Caddy process belongs to the Ring FileBase public gateway
+  container and is not a general host ingress;
+- Octelium is present but currently unauthenticated and not usable as the public
+  route;
+- MicroK8s has degraded workloads and no listed ingress resources.
 
-Apache/httpd route shape:
+Safe operator options after local smoke:
 
-```apache
-ProxyPreserveHost On
-
-ProxyPass        "/api/v1/edge/health" "http://127.0.0.1:9413/api/v1/edge/health"
-ProxyPassReverse "/api/v1/edge/health" "http://127.0.0.1:9413/api/v1/edge/health"
-
-ProxyPass        "/healthz" "http://127.0.0.1:9413/healthz"
-ProxyPassReverse "/healthz" "http://127.0.0.1:9413/healthz"
-
-ProxyPass        "/readyz" "http://127.0.0.1:9413/readyz"
-ProxyPassReverse "/readyz" "http://127.0.0.1:9413/readyz"
-
-Header always set X-Content-Type-Options "nosniff"
-Header always set Referrer-Policy "no-referrer"
-```
-
-The operator must place this inside the approved `api.daarion.city` HTTPS
-virtual host or equivalent TLS-terminated route.
+- external HTTPS tunnel/CDN/load balancer to `127.0.0.1:9413`;
+- a new dedicated host-level reverse proxy with approved TLS/firewall;
+- a reviewed integration with an existing ingress only if its owner confirms it
+  is the correct layer.
 
 Only after the approved ingress route exists, add the minimum firewall allow
 rule required for that route, for example:

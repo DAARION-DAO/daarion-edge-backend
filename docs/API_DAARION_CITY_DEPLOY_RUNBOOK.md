@@ -1,6 +1,7 @@
 # api.daarion.city Deploy Runbook
 
-Status: operator runbook, no production database writes.
+Status: operator runbook, no production database writes. Public ingress is not
+approved until the stack audit is reviewed.
 
 This runbook deploys the merged `main` branch of `DAARION-DAO/daarion-edge-backend`
 as the public beta health target for MicroDAO Connect Device.
@@ -42,6 +43,12 @@ min_edge_client_version=0.2.2-3
 
 Do not insert a `device_backend_profiles` row until the public smoke checks in
 this runbook return HTTP `200` with the expected JSON.
+
+Read before any public ingress work:
+
+```text
+docs/operations/NODA3_NODA4_OCTELIUM_STACK_AUDIT_2026-07-03.md
+```
 
 ## Non-Goals
 
@@ -173,62 +180,28 @@ Expected:
 
 ## Reverse Proxy
 
-Use the existing approved ingress on the selected host. On NODA3, the current
-read-only audit found `httpd` on port `80`, no `nginx`, no `caddy`, no
-`traefik`, no `certbot`, no confirmed public `443` listener, and no observed
-UFW allow rules for `80/tcp` or `443/tcp`. That means firewall, TLS, and
-virtual-host ownership must be resolved by the operator before public readiness
-can be claimed.
+The stack audit found no approved general-purpose public ingress for this API.
 
-If the host uses Nginx, add a narrowly scoped `api.daarion.city` server block or
-merge these locations into the existing `api.daarion.city` HTTPS server block.
+Do not assume Apache/httpd is the correct path. On NODA3, `httpd` is owned by
+the Nextcloud snap service.
 
-Proxy only the health endpoints required for this beta gate:
+Do not reuse the Ring FileBase Caddy container for this API without a separate
+Ring FileBase ingress decision. That Caddy instance is scoped to file gateway
+traffic on host ports `10080` and `10443`.
 
-```nginx
-location = /api/v1/edge/health {
-    proxy_pass http://127.0.0.1:9413/api/v1/edge/health;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    add_header X-Content-Type-Options nosniff always;
-    add_header Referrer-Policy no-referrer always;
-}
+Do not use MicroK8s/k3s ingress for this beta health endpoint while the cluster
+has degraded workloads and no listed ingress resources.
 
-location = /healthz {
-    proxy_pass http://127.0.0.1:9413/healthz;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    add_header X-Content-Type-Options nosniff always;
-    add_header Referrer-Policy no-referrer always;
-}
+Do not use Octelium for public `api.daarion.city` until Octelium authentication
+and service routing are repaired and explicitly designed.
 
-location = /readyz {
-    proxy_pass http://127.0.0.1:9413/readyz;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    add_header X-Content-Type-Options nosniff always;
-    add_header Referrer-Policy no-referrer always;
-}
-```
+Approved next public-ingress choices must come from an operator decision after
+local Docker smoke. Candidate directions are:
 
-Validate and reload:
-
-```bash
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-If TLS is not already configured for `api.daarion.city`, configure HTTPS before
-declaring the backend ready.
+- external HTTPS tunnel/CDN/load balancer to `127.0.0.1:9413`;
+- a new dedicated host-level reverse proxy with approved TLS and firewall;
+- a reviewed integration with an existing ingress only if its service owner
+  confirms it is the correct layer.
 
 ## Public Smoke
 
