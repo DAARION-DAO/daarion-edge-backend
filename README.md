@@ -22,6 +22,9 @@ The health endpoint is public, read-only, and unauthenticated by design. It is
 safe to use as the target for a future `device_backend_profiles.backend_url`
 only after it is deployed and verified on the production host.
 
+FastAPI interactive docs and OpenAPI JSON are disabled for this health-only
+service so the public deployment exposes only the intended read-only endpoints.
+
 ## Local Run
 
 ```bash

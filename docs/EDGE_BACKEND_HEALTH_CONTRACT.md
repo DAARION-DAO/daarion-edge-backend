@@ -66,6 +66,10 @@ GET /readyz
 These endpoints are intended for process and reverse-proxy checks. They do not
 replace the canonical Edge Client endpoint.
 
+FastAPI interactive docs and OpenAPI JSON are disabled for this health-only
+public service. Public deployments should return `404` for `/docs`, `/redoc`,
+and `/openapi.json`.
+
 ## Production Reverse Proxy
 
 Candidate production base URL:

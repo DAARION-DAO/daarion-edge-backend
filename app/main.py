@@ -107,6 +107,9 @@ app = FastAPI(
     title="DAARION Edge Backend",
     version=DEFAULT_BACKEND_VERSION,
     description="Minimal DAARION Edge health backend for Connect Device beta.",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 

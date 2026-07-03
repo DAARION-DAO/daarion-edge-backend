@@ -63,3 +63,9 @@ def test_invalid_env_values_fall_back(monkeypatch) -> None:
 
     assert payload["environment"] == "production"
     assert payload["status"] == "ok"
+
+
+def test_public_docs_are_not_exposed() -> None:
+    assert client.get("/docs").status_code == 404
+    assert client.get("/redoc").status_code == 404
+    assert client.get("/openapi.json").status_code == 404
