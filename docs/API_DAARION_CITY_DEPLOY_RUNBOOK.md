@@ -5,6 +5,24 @@ Status: operator runbook, no production database writes.
 This runbook deploys the merged `main` branch of `DAARION-DAO/daarion-edge-backend`
 as the public beta health target for MicroDAO Connect Device.
 
+Preferred production host:
+
+```text
+NODA3
+```
+
+Fallback host:
+
+```text
+NODA4, only if NODA3 is not reachable or unsuitable
+```
+
+Excluded host:
+
+```text
+NODA1, currently unavailable for this deploy
+```
+
 Canonical public endpoint:
 
 ```text
@@ -37,14 +55,22 @@ this runbook return HTTP `200` with the expected JSON.
 
 ## Preflight
 
-Run on the selected production host:
+Run on NODA3 first. Do not continue to NODA4 unless NODA3 fails these checks or
+the operator explicitly rejects NODA3 for this role.
 
 ```bash
 whoami
 hostname
+uptime
 docker --version
 docker compose version
 sudo -n true
+sudo ss -ltnp | grep -E ':80 |:443 |:9413 ' || true
+command -v nginx || true
+command -v caddy || true
+command -v traefik || true
+command -v certbot || true
+df -h /
 ```
 
 Confirm the hostname currently resolves to the selected host:
@@ -59,7 +85,19 @@ As of the deployment prep audit, `api.daarion.city` resolves to:
 144.76.224.179
 ```
 
-If the selected host is different, update DNS first and wait for propagation.
+As of the NODA3 retargeting audit, NODA3's observed public IPv4 is:
+
+```text
+212.8.58.133
+```
+
+If NODA3 remains the selected host, update the DNS `A` record for
+`api.daarion.city` to `212.8.58.133`, remove the old `144.76.224.179` value, and
+wait for propagation before declaring the endpoint live.
+
+Do not reuse port `80` blindly. The NODA3 audit observed `httpd` listening on
+port `80`; preserve existing services and add only an approved virtual host or
+reverse-proxy route for `api.daarion.city`.
 
 ## Deploy With Docker Compose
 
@@ -134,6 +172,13 @@ Expected:
 - `/openapi.json`: HTTP `404`
 
 ## Reverse Proxy
+
+Use the existing approved ingress on the selected host. On NODA3, the current
+read-only audit found `httpd` on port `80`, no `nginx`, no `caddy`, no
+`traefik`, no `certbot`, no confirmed public `443` listener, and no observed
+UFW allow rules for `80/tcp` or `443/tcp`. That means firewall, TLS, and
+virtual-host ownership must be resolved by the operator before public readiness
+can be claimed.
 
 If the host uses Nginx, add a narrowly scoped `api.daarion.city` server block or
 merge these locations into the existing `api.daarion.city` HTTPS server block.
