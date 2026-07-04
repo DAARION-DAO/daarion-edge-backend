@@ -4,7 +4,7 @@
 
 ## 1. Document Status
 
-Status: canonical architecture draft
+Status: canonical architecture roadmap
 
 Date: 2026-07
 
@@ -157,10 +157,11 @@ Operator-provided node evidence:
 - NODA1 is unavailable/offline for the current beta deployment path.
 - NODA2 is a strong control/development/runtime node, especially around
   SOFIIA, but must not be hardcoded as eternal doctrine.
-- NODA3 is reachable, has Docker/Compose, has public IP `212.8.58.133`, and is
-  the preferred first host for the local Edge Backend service.
+- NODA3 is reachable, has Docker/Compose, and is the preferred first host for
+  the local Edge Backend service.
 - NODA4 is a fallback/future node but is currently unreachable.
-- `api.daarion.city` currently points to old IP `144.76.224.179`, not NODA3.
+- `api.daarion.city` currently does not point to a verified public Edge
+  Backend runtime.
 
 Operator-provided NODA3 infrastructure evidence:
 
