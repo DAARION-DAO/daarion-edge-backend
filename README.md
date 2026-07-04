@@ -2,6 +2,12 @@
 
 Minimal beta backend for DAARION Edge Client health/profile discovery.
 
+## Repository Role
+
+This repository is part of the DAARION.city ecosystem. See
+`docs/REPOSITORY_ROLE.md` for the repository boundary and public/private
+information rules.
+
 This service exists to unblock the MicroDAO Connect Device beta gate by
 providing a real backend base URL that can answer:
 
