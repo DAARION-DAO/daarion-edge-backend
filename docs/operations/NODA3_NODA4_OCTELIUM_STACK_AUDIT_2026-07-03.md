@@ -18,8 +18,9 @@ public ingress/TLS/DNS -> public smoke -> only then device_backend_profiles
 Reason:
 
 - NODA3 is reachable and suitable for a local Docker service.
-- `api.daarion.city` still points to `144.76.224.179`, not NODA3.
-- NODA3 public IPv4 is `212.8.58.133`.
+- `api.daarion.city` still resolves away from the verified NODA3 target.
+- NODA3 public IPv4 was operator-verified and is intentionally redacted from
+  this public audit.
 - The host has multiple existing services and ingress surfaces.
 - `httpd` is a Nextcloud snap Apache process, not a confirmed DAARION ingress.
 - Caddy exists only inside the Ring FileBase public gateway container on
@@ -73,13 +74,13 @@ Read-only NODA3 host facts:
 
 ```text
 ssh target: noda3
-hostname: llm80-che-1-1
-user: zevs
+hostname: operator-verified
+user: redacted
 sudo -n: available
 OS: Ubuntu 24.04.4 LTS
 kernel: 6.8.0-111-generic
 uptime: up 4 weeks, 4 days
-public IPv4: 212.8.58.133
+public IPv4: operator-verified, redacted from public docs
 memory: 125Gi total
 root disk: 3.6T total, 1.7T free, 52% used
 ```
@@ -87,7 +88,7 @@ root disk: 3.6T total, 1.7T free, 52% used
 DNS resolution from NODA3:
 
 ```text
-api.daarion.city -> 144.76.224.179
+api.daarion.city -> current target is not the verified NODA3 backend target
 edge.daarion.city -> GitHub Pages addresses through daarion-dao.github.io
 ```
 
@@ -98,52 +99,11 @@ Docker version 29.3.1
 Docker Compose version v5.1.1
 ```
 
-Docker networks:
-
-```text
-bridge
-dagi-network
-market-data-migration_default
-noda3-external-workers_default
-ring-filebase-noda3
-host
-none
-```
-
-Important running containers:
-
-```text
-ring-filebase-auth-gateway-noda3
-ring-filebase-api-noda3
-ring-filebase-public-gateway-noda3
-ring-filebase-minio-noda3
-ring-filebase-cdn-noda3
-dagi-market-data-node3
-noda3-ollama-reasoning-external
-noda3-heartbeat-external
-noda3-neo4j-graph-external
-noda3-qdrant-retrieval-external
-noda3-gpu-worker-external
-octelium-daemon-noda3
-dcgm-exporter
-grafana
-postgres-daarion
-neo4j-daarion
-qdrant-daarion
-gitlab
-```
-
-Existing important directories:
-
-```text
-/opt/ring-file-base
-/srv/agromatrix
-/srv/gitlab
-/home/zevs/microdao-daarion
-/home/zevs/noda3-external-workers
-/data
-/var/snap/nextcloud
-```
+Observed Docker networks and containers confirmed that NODA3 already runs
+several unrelated service groups, including Ring FileBase, DAGI market data,
+external worker services, Octelium, observability, databases, retrieval/graph
+services, and GitLab. Exact network names, container names, and operator paths
+are intentionally omitted from this public audit.
 
 Do not disturb those services or paths during the Edge health beta gate.
 
@@ -158,17 +118,16 @@ ssh -o BatchMode=yes -o ConnectTimeout=8 noda4 'set -e; hostname; uptime; docker
 Result:
 
 ```text
-ssh: connect to host 212.8.58.133 port 33148: Network is unreachable
+Network is unreachable
 ```
 
 NODA4 remains fallback-only and is not currently usable for this deployment.
 
 ## Octelium Evidence
 
-Octelium container exists:
+Octelium daemon container exists:
 
 ```text
-container: octelium-daemon-noda3
 image: ghcr.io/octelium/octelium:0.30.0
 status: running
 network: host
@@ -200,9 +159,8 @@ Observed listeners:
 
 ```text
 *:80 -> httpd from snap.nextcloud.apache.service
-0.0.0.0:10080 -> ring-filebase-public-gateway-noda3 container port 80
-0.0.0.0:10443 -> ring-filebase-public-gateway-noda3 container port 443
-0.0.0.0:8443 -> gitlab container port 443
+non-standard HTTP/HTTPS ports -> existing Ring FileBase public gateway
+non-standard HTTPS port -> existing GitLab container
 ```
 
 No standard host `*:443` listener was confirmed.
@@ -220,7 +178,6 @@ certbot: missing
 Apache/httpd truth:
 
 ```text
-httpd process path: /snap/nextcloud/53664/bin/httpd
 systemd unit: snap.nextcloud.apache.service
 snap nextcloud ports: http=80, https=443
 ```
@@ -231,10 +188,8 @@ intended DAARION or `api.daarion.city` ingress layer.
 Caddy truth:
 
 ```text
-container: ring-filebase-public-gateway-noda3
 image: caddy:2.8.4-alpine
-host ports: 10080->80, 10443->443
-Caddyfile source: /home/zevs/microdao-daarion/infrastructure/deployment/ring-filebase-noda3/caddy/files-gateway/Caddyfile
+scope: Ring FileBase public gateway
 ```
 
 The Caddyfile is scoped to Ring FileBase (`{$FILES_DOMAIN}`, `/files/*`, upload
@@ -246,14 +201,14 @@ without a separate Ring FileBase ingress decision.
 Current public DNS:
 
 ```text
-api.daarion.city A -> 144.76.224.179
+api.daarion.city A -> <current-dns-target>
 edge.daarion.city CNAME -> daarion-dao.github.io
 ```
 
 NODA3 public IPv4:
 
 ```text
-212.8.58.133
+<operator-verified-noda3-ip>
 ```
 
 Firewall:
@@ -263,8 +218,7 @@ ufw: active
 default incoming: deny
 80/tcp allow: not observed
 443/tcp allow: not observed
-10080/tcp allow: present
-10443/tcp allow: present
+existing non-standard Ring FileBase public ports: present
 ```
 
 TLS tooling:
@@ -275,7 +229,7 @@ certbot: missing
 ```
 
 Current public smoke remains blocked because `api.daarion.city` still points to
-the old IP and the old target times out.
+a target that does not serve the verified Edge Backend health endpoint.
 
 ## Existing DAARION Services On NODA3
 
@@ -316,7 +270,7 @@ microk8s kubelite: active
 MicroK8s:
 
 ```text
-node llm80-che-1-1: Ready
+node: Ready
 multiple kube-system/gpu/daarion-edge pods are ContainerCreating, Pending,
 ContainerStatusUnknown, or PodInitializing
 no ingress resources were listed
@@ -349,7 +303,8 @@ Conclusion: do not use Kubernetes/k3s ingress for this beta health endpoint.
    - a new dedicated host-level reverse proxy with approved TLS/firewall; or
    - a carefully reviewed Apache/Caddy integration only if the current service
      owner confirms it is the right ingress.
-5. Repoint `api.daarion.city` to `212.8.58.133` only after ingress/TLS is ready.
+5. Repoint `api.daarion.city` to the operator-verified NODA3 target only after
+   ingress/TLS is ready.
 6. Run public smoke.
 7. Only after HTTP `200`, open the separate `loval-echoes`
    `device_backend_profiles` task.

@@ -2,6 +2,12 @@
 
 Status: docs-only deployment plan. Do not apply production database writes.
 
+Canonical roadmap alignment:
+
+```text
+docs/architecture/DAARION_PLATFORM_MULTINODE_ARCHITECTURE_2026-07.md
+```
+
 ## Executive Decision
 
 Deploy `daarion-edge-backend` to NODA3 first as a local Docker service only.
@@ -33,14 +39,14 @@ NODA3 read-only checks succeeded from the operator environment:
 
 ```text
 ssh target: noda3
-hostname: llm80-che-1-1
-user: zevs
+hostname: operator-verified
+user: redacted
 sudo -n: available
 uptime: up 4 weeks, 4 days
 Docker: Docker version 29.3.1
 Docker Compose: v5.1.1
 root disk: 3.6T total, 1.7T free, 52% used
-observed public IPv4: 212.8.58.133
+observed public IPv4: operator-verified, redacted from public docs
 ```
 
 NODA3 ingress facts from read-only checks:
@@ -58,28 +64,10 @@ ufw 80/tcp allow: not observed
 ufw 443/tcp allow: not observed
 ```
 
-Existing NODA3 services that must not be disturbed:
-
-```text
-ring-filebase-auth-gateway-noda3
-ring-filebase-api-noda3
-ring-filebase-public-gateway-noda3
-ring-filebase-minio-noda3
-ring-filebase-cdn-noda3
-dagi-market-data-node3
-noda3-ollama-reasoning-external
-noda3-heartbeat-external
-noda3-neo4j-graph-external
-noda3-qdrant-retrieval-external
-noda3-gpu-worker-external
-octelium-daemon-noda3
-dcgm-exporter
-grafana
-postgres-daarion
-neo4j-daarion
-qdrant-daarion
-gitlab
-```
+Existing NODA3 services that must not be disturbed include Ring FileBase, DAGI
+market data, Ollama/GPU worker services, Octelium, Grafana, Postgres, Neo4j,
+Qdrant, GitLab, and related DAARION infrastructure. Exact container names and
+operator paths are intentionally omitted from this public runbook.
 
 Historical workspace notes also showed MicroK8s active and `k3s-agent`
 problematic on NODA3. Do not install, repair, or change k3s/MicroK8s for this
@@ -97,24 +85,25 @@ ssh noda4 -> Network is unreachable
 Current DNS:
 
 ```text
-api.daarion.city A -> 144.76.224.179
+api.daarion.city A -> <current-dns-target>
 edge.daarion.city CNAME -> daarion-dao.github.io
 ```
 
 Observed NODA3 public IPv4:
 
 ```text
-212.8.58.133
+<operator-verified-noda3-ip>
 ```
 
 Required DNS decision if NODA3 is approved:
 
 ```text
-api.daarion.city A -> 212.8.58.133
+api.daarion.city A -> <operator-verified-noda3-ip>
 ```
 
-Remove or replace the old `144.76.224.179` target. Do not use
-`edge.daarion.city` for this backend while it remains a GitHub Pages hostname.
+Remove or replace the previous target only after ingress, TLS, firewall, and
+rollback are approved. Do not use `edge.daarion.city` for this backend while it
+remains a GitHub Pages hostname.
 
 ## Required Checks Before Deploy
 
@@ -251,7 +240,7 @@ Do not open broad additional ports for this health backend.
 After NODA3 local smoke passes and the ingress route is ready, repoint DNS:
 
 ```text
-api.daarion.city A 212.8.58.133
+api.daarion.city A <operator-verified-noda3-ip>
 ```
 
 Then wait for propagation:
@@ -313,8 +302,9 @@ docker compose down
 ```
 
 Remove only the `api.daarion.city` route that was added for this backend, then
-reload the approved proxy. Do not touch existing Ring FileBase, GitLab, Qdrant,
-Neo4j, Postgres, Grafana, GPU worker, or Octelium containers.
+reload the approved proxy. Do not touch unrelated Ring FileBase, GitLab,
+datastore, observability, GPU worker, Octelium, or DAARION infrastructure
+containers.
 
 If DNS was changed, revert `api.daarion.city` only after deciding where the API
 hostname should point.

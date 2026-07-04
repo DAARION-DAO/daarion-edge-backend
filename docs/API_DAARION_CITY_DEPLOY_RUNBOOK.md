@@ -4,7 +4,8 @@ Status: operator runbook, no production database writes. Public ingress is not
 approved until the stack audit is reviewed.
 
 This runbook deploys the merged `main` branch of `DAARION-DAO/daarion-edge-backend`
-as the public beta health target for MicroDAO Connect Device.
+as the local-first runtime target for the MicroDAO Connect Device beta gate.
+Public exposure requires a separate ingress/TLS/DNS decision after local smoke.
 
 Preferred production host:
 
@@ -47,6 +48,7 @@ this runbook return HTTP `200` with the expected JSON.
 Read before any public ingress work:
 
 ```text
+docs/architecture/DAARION_PLATFORM_MULTINODE_ARCHITECTURE_2026-07.md
 docs/operations/NODA3_NODA4_OCTELIUM_STACK_AUDIT_2026-07-03.md
 ```
 
@@ -86,21 +88,20 @@ Confirm the hostname currently resolves to the selected host:
 dig +short api.daarion.city A
 ```
 
-As of the deployment prep audit, `api.daarion.city` resolves to:
+The current DNS target and the selected host address are operator-verified
+values. Re-check them in the DNS provider and on the selected host before any
+public ingress work. Do not treat the local Docker deploy as approval to change
+DNS.
 
 ```text
-144.76.224.179
+api.daarion.city A -> <current-dns-target>
+NODA3 public IPv4 -> <operator-verified-noda3-ip>
 ```
 
-As of the NODA3 retargeting audit, NODA3's observed public IPv4 is:
-
-```text
-212.8.58.133
-```
-
-If NODA3 remains the selected host, update the DNS `A` record for
-`api.daarion.city` to `212.8.58.133`, remove the old `144.76.224.179` value, and
-wait for propagation before declaring the endpoint live.
+If NODA3 remains the selected host in a later public-ingress task, update the
+DNS `A` record for `api.daarion.city` to the operator-verified NODA3 public IPv4
+and remove the previous target only after ingress, TLS, firewall, and rollback
+are approved.
 
 Do not reuse port `80` blindly. The NODA3 audit observed `httpd` listening on
 port `80`; preserve existing services and add only an approved virtual host or
@@ -187,7 +188,7 @@ the Nextcloud snap service.
 
 Do not reuse the Ring FileBase Caddy container for this API without a separate
 Ring FileBase ingress decision. That Caddy instance is scoped to file gateway
-traffic on host ports `10080` and `10443`.
+traffic on non-standard host ports.
 
 Do not use MicroK8s/k3s ingress for this beta health endpoint while the cluster
 has degraded workloads and no listed ingress resources.
@@ -234,12 +235,9 @@ cd /opt/daarion-edge-backend
 docker compose down
 ```
 
-Remove or comment out the Nginx locations, then reload Nginx:
-
-```bash
-sudo nginx -t
-sudo systemctl reload nginx
-```
+If a later public-ingress task added a route, remove only that route and reload
+the approved proxy using that proxy's own validation/reload command. For the
+local-only Docker deploy, there is no proxy rollback step.
 
 ## Next Gate
 
